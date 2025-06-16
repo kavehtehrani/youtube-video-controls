@@ -25,13 +25,33 @@ function applyTransform(angle, zoom, fill, panX, panY) {
     video.style.transformOrigin = "center";
     video.style.transform = `translate(${translateX}%, ${translateY}%) scale(${zoom}) rotate(${angle}deg)`;
   } else {
-    // Non-fill mode: just apply the transform like the console command, don't touch other styles
+    // Non-fill mode: apply transform and scale if needed for rotation
     if (angle === 0 && zoom === 1) {
       // Reset transform when back to normal
       video.style.transform = "";
     } else {
-      // Just apply the transform, exactly like the console command
-      video.style.transform = `scale(${zoom}) rotate(${angle}deg)`;
+      let finalScale = zoom;
+
+      // If rotated 90° or 270°, we need to scale down to fit the swapped dimensions
+      if (angle % 180 === 90) {
+        const rect = video.getBoundingClientRect();
+        const containerWidth = rect.width;
+        const containerHeight = rect.height;
+
+        // When rotated 90°/270°, width becomes height and vice versa
+        // Scale to fit within the smaller dimension
+        const scaleToFit = Math.min(
+          containerWidth / containerHeight,
+          containerHeight / containerWidth
+        );
+        finalScale = zoom * scaleToFit;
+
+        console.log(
+          `Video rotated, scaling from ${zoom} to ${finalScale} (scale factor: ${scaleToFit})`
+        );
+      }
+
+      video.style.transform = `scale(${finalScale}) rotate(${angle}deg)`;
     }
 
     console.log("Applied transform:", video.style.transform);
