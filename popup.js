@@ -48,15 +48,13 @@ function resetAllControls() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // New rotation buttons
   document
-    .getElementById("rotate90")
+    .getElementById("rotateCCW")
+    .addEventListener("click", () => updateRotation(-90));
+  document
+    .getElementById("rotateCW")
     .addEventListener("click", () => updateRotation(90));
-  document
-    .getElementById("rotate180")
-    .addEventListener("click", () => updateRotation(180));
-  document
-    .getElementById("rotate270")
-    .addEventListener("click", () => updateRotation(270));
 
   document.getElementById("applyCustom").addEventListener("click", () => {
     let val = parseInt(document.getElementById("customAngle").value, 10);

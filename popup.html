@@ -31,12 +31,21 @@
     .reset-button:hover {
       background-color: #cc0000;
     }
+    .rotation-buttons {
+      display: flex;
+      gap: 5px;
+    }
+    .rotation-buttons button {
+      flex: 1;
+      margin: 5px 0;
+    }
   </style>
 </head>
 <body>
-  <button id="rotate90">Rotate +90°</button>
-  <button id="rotate180">Rotate +180°</button>
-  <button id="rotate270">Rotate +270°</button>
+  <div class="rotation-buttons">
+    <button id="rotateCCW">↺ 90° CCW</button>
+    <button id="rotateCW">↻ 90° CW</button>
+  </div>
   <div>
     <label>
       Custom angle:
