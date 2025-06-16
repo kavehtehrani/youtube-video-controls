@@ -1,3 +1,38 @@
+// Store original video styles
+let originalVideoStyles = null;
+
+function saveOriginalStyles(video) {
+  if (originalVideoStyles === null) {
+    originalVideoStyles = {
+      position: video.style.position,
+      top: video.style.top,
+      left: video.style.left,
+      width: video.style.width,
+      height: video.style.height,
+      objectFit: video.style.objectFit,
+      zIndex: video.style.zIndex,
+      transformOrigin: video.style.transformOrigin,
+      transform: video.style.transform,
+    };
+    console.log("Saved original video styles:", originalVideoStyles);
+  }
+}
+
+function restoreOriginalStyles(video) {
+  if (originalVideoStyles !== null) {
+    video.style.position = originalVideoStyles.position;
+    video.style.top = originalVideoStyles.top;
+    video.style.left = originalVideoStyles.left;
+    video.style.width = originalVideoStyles.width;
+    video.style.height = originalVideoStyles.height;
+    video.style.objectFit = originalVideoStyles.objectFit;
+    video.style.zIndex = originalVideoStyles.zIndex;
+    video.style.transformOrigin = originalVideoStyles.transformOrigin;
+    video.style.transform = originalVideoStyles.transform;
+    console.log("Restored original video styles");
+  }
+}
+
 function applyTransform(angle, zoom, fill, panX, panY) {
   const video = document.querySelector("video");
   if (!video) return;
@@ -5,6 +40,20 @@ function applyTransform(angle, zoom, fill, panX, panY) {
   console.log(
     `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}`
   );
+
+  // Check if this is a complete reset
+  const isReset =
+    angle === 0 && zoom === 1 && panX === 0 && panY === 0 && !fill;
+
+  if (isReset) {
+    // Complete reset - restore original styles
+    restoreOriginalStyles(video);
+    originalVideoStyles = null; // Clear saved state
+    return;
+  }
+
+  // Save original styles before making any changes
+  saveOriginalStyles(video);
 
   if (fill) {
     const translateX = -50 + panX;
@@ -25,9 +74,8 @@ function applyTransform(angle, zoom, fill, panX, panY) {
     video.style.transformOrigin = "center";
     video.style.transform = `translate(${translateX}%, ${translateY}%) scale(${zoom}) rotate(${angle}deg)`;
   } else {
-    // Non-fill mode: apply transform and scale if needed for rotation
+    // Non-fill mode: just apply the transform, don't touch other styles
     if (angle === 0 && zoom === 1) {
-      // Reset transform when back to normal
       video.style.transform = "";
     } else {
       let finalScale = zoom;
@@ -51,6 +99,7 @@ function applyTransform(angle, zoom, fill, panX, panY) {
         );
       }
 
+      video.style.transformOrigin = "center";
       video.style.transform = `scale(${finalScale}) rotate(${angle}deg)`;
     }
 
