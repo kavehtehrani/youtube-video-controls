@@ -74,8 +74,11 @@ function applyTransform(angle, zoom, fill, panX, panY) {
     video.style.transformOrigin = "center";
     video.style.transform = `translate(${translateX}%, ${translateY}%) scale(${zoom}) rotate(${angle}deg)`;
   } else {
-    // Non-fill mode: just apply the transform, don't touch other styles
-    if (angle === 0 && zoom === 1) {
+    // Non-fill mode: apply transform with panning support
+    const needsTransform =
+      angle !== 0 || zoom !== 1 || panX !== 0 || panY !== 0;
+
+    if (!needsTransform) {
       video.style.transform = "";
     } else {
       let finalScale = zoom;
@@ -100,7 +103,8 @@ function applyTransform(angle, zoom, fill, panX, panY) {
       }
 
       video.style.transformOrigin = "center";
-      video.style.transform = `scale(${finalScale}) rotate(${angle}deg)`;
+      // Include panning in non-fill mode
+      video.style.transform = `translate(${panX}%, ${panY}%) scale(${finalScale}) rotate(${angle}deg)`;
     }
 
     console.log("Applied transform:", video.style.transform);
