@@ -14,12 +14,26 @@ async function sendTransform() {
     fill: document.getElementById("fillScreen").checked,
     panX: currentPanX,
     panY: currentPanY,
+    persistSettings: document.getElementById("persistSettings").checked,
   });
 }
 
 async function loadCurrentSettings() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
+
+  // Load persistence preference from storage
+  const result = await chrome.storage.local.get(["persistSettings"]);
+  const persistSettings =
+    result.persistSettings !== undefined ? result.persistSettings : false;
+  document.getElementById("persistSettings").checked = persistSettings;
+  console.log("Loaded persistence preference:", persistSettings);
+
+  // Send persistence preference to content script
+  chrome.tabs.sendMessage(tab.id, {
+    action: "setPersistence",
+    persistSettings: persistSettings,
+  });
 
   chrome.tabs.sendMessage(
     tab.id,
@@ -102,6 +116,27 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("fillScreen")
     .addEventListener("change", sendTransform);
+
+  // Persistence checkbox
+  document
+    .getElementById("persistSettings")
+    .addEventListener("change", async () => {
+      const isChecked = document.getElementById("persistSettings").checked;
+      await chrome.storage.local.set({ persistSettings: isChecked });
+      console.log("Saved persistence preference:", isChecked);
+
+      // Also send to content script immediately
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (tab) {
+        chrome.tabs.sendMessage(tab.id, {
+          action: "setPersistence",
+          persistSettings: isChecked,
+        });
+      }
+    });
 
   // Reset button
   document

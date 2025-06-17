@@ -10,6 +10,7 @@ let savedSettings = {
   panY: 0,
 };
 let hasSettings = false;
+let persistenceEnabled = false; // Default to disabled
 let lastURL = null;
 
 function saveOriginalStyles(video) {
@@ -44,18 +45,25 @@ function restoreOriginalStyles(video) {
   }
 }
 
-function applyTransform(angle, zoom, fill, panX, panY) {
+function applyTransform(angle, zoom, fill, panX, panY, persistSettings = true) {
   const video = document.querySelector("video");
   if (!video) return;
 
   console.log(
-    `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}`
+    `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}, persist=${persistSettings}`
   );
 
-  // Save settings in memory for persistence
-  savedSettings = { angle, zoom, fill, panX, panY };
-  hasSettings = angle !== 0 || zoom !== 1 || fill || panX !== 0 || panY !== 0;
-  console.log("Settings saved to memory:", savedSettings);
+  // Update persistence setting
+  persistenceEnabled = persistSettings;
+
+  // Save settings in memory for persistence (only if persistence is enabled)
+  if (persistSettings) {
+    savedSettings = { angle, zoom, fill, panX, panY };
+    hasSettings = angle !== 0 || zoom !== 1 || fill || panX !== 0 || panY !== 0;
+    console.log("Settings saved to memory:", savedSettings);
+  } else {
+    console.log("Persistence disabled - not saving settings to memory");
+  }
 
   // Check if this is a complete reset
   const isReset =
@@ -144,7 +152,7 @@ function checkForNewVideo() {
     originalVideoStyles = null;
 
     // Reapply saved settings if we have any
-    if (hasSettings) {
+    if (hasSettings && persistenceEnabled) {
       console.log("Reapplying saved settings to new video:", savedSettings);
 
       // Function to attempt applying settings
@@ -158,7 +166,8 @@ function checkForNewVideo() {
             savedSettings.zoom,
             savedSettings.fill,
             savedSettings.panX,
-            savedSettings.panY
+            savedSettings.panY,
+            persistenceEnabled
           );
         } else if (attempt < 10) {
           // Video not ready yet, try again
@@ -171,6 +180,10 @@ function checkForNewVideo() {
 
       // Start attempting to apply settings
       setTimeout(() => attemptApply(), 500);
+    } else if (!persistenceEnabled) {
+      console.log(
+        "Persistence disabled - not reapplying settings to new video"
+      );
     }
   }
 }
@@ -188,11 +201,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request.zoom,
       request.fill,
       request.panX,
-      request.panY
+      request.panY,
+      request.persistSettings
     );
     sendResponse({ status: "done" });
   } else if (request.action === "getSettings") {
     // Send current settings to popup
     sendResponse({ settings: savedSettings, hasSettings: hasSettings });
+  } else if (request.action === "setPersistence") {
+    // Update persistence setting
+    persistenceEnabled = request.persistSettings;
+    console.log("Persistence preference updated:", persistenceEnabled);
+    sendResponse({ status: "done" });
   }
 });

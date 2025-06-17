@@ -223,6 +223,11 @@
   <div class="container">
     <h3>🎥 Video Controls</h3>
     
+    <div class="checkbox-container">
+      <input type="checkbox" id="persistSettings" />
+      <label for="persistSettings">Preserve settings on video change</label>
+    </div>
+    
     <div class="rotation-buttons">
       <button id="rotateCCW">⤹ 90&deg;</button>
       <button id="rotateCW">⤸ 90&deg;</button>
@@ -231,7 +236,7 @@
     <div class="custom-angle">
       <label>Custom angle:</label>
       <div class="angle-input-group">
-        <input type="number" id="customAngle" value="0" min="0" max="360" step="1" />
+      <input type="number" id="customAngle" value="0" min="0" max="360" step="1" />
         <button id="applyCustom" class="apply-btn">Apply</button>
       </div>
     </div>
@@ -239,16 +244,16 @@
     <div class="checkbox-container">
       <input type="checkbox" id="fillScreen" />
       <label for="fillScreen">Fill entire available space</label>
-    </div>
+  </div>
     
     <div class="divider"></div>
-    
+
     <div class="slider-section">
       <div class="slider-label">
         <span>Zoom</span>
         <span class="slider-value" id="zoomValue">1.0x</span>
       </div>
-      <input type="range" id="zoomSlider" min="0.5" max="3" step="0.1" value="1" />
+  <input type="range" id="zoomSlider" min="0.5" max="3" step="0.1" value="1" />
     </div>
     
     <div class="slider-section">
@@ -256,7 +261,7 @@
         <span>Pan X</span>
         <span class="slider-value" id="panXVal">0%</span>
       </div>
-      <input type="range" id="panX" min="-100" max="100" value="0" />
+  <input type="range" id="panX" min="-100" max="100" value="0" />
     </div>
     
     <div class="slider-section">
@@ -264,7 +269,7 @@
         <span>Pan Y</span>
         <span class="slider-value" id="panYVal">0%</span>
       </div>
-      <input type="range" id="panY" min="-100" max="100" value="0" />
+  <input type="range" id="panY" min="-100" max="100" value="0" />
     </div>
     
     <button id="resetAll" class="reset-button">Reset All</button>
