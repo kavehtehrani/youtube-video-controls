@@ -3,25 +3,62 @@ let currentZoom = 1.0;
 let currentPanX = 0;
 let currentPanY = 0;
 
-async function sendTransform() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
+// Message handler object
+const MessageHandler = {
+  async sendTransform() {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tab) return;
 
-  chrome.tabs.sendMessage(tab.id, {
-    action: "transform",
-    angle: currentRotation,
-    zoom: currentZoom,
-    fill: document.getElementById("fillScreen").checked,
-    panX: currentPanX,
-    panY: currentPanY,
-    persistSettings: document.getElementById("persistSettings").checked,
-  });
-}
+    chrome.tabs.sendMessage(tab.id, {
+      action: "transform",
+      angle: currentRotation,
+      zoom: currentZoom,
+      fill: document.getElementById("fillScreen").checked,
+      panX: currentPanX,
+      panY: currentPanY,
+      persistSettings: document.getElementById("persistSettings").checked,
+    });
+  },
+
+  async setPersistence(isChecked) {
+    await chrome.storage.local.set({ persistSettings: isChecked });
+    console.log("Saved persistence preference:", isChecked);
+
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab) {
+      chrome.tabs.sendMessage(tab.id, {
+        action: "setPersistence",
+        persistSettings: isChecked,
+      });
+    }
+  },
+
+  async getSettings() {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tab) return;
+
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(tab.id, { action: "getSettings" }, (response) => {
+        if (response && response.hasSettings) {
+          resolve(response.settings);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  },
+};
 
 async function loadCurrentSettings() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
-
   // Load persistence preference from storage
   const result = await chrome.storage.local.get(["persistSettings"]);
   const persistSettings =
@@ -30,32 +67,22 @@ async function loadCurrentSettings() {
   console.log("Loaded persistence preference:", persistSettings);
 
   // Send persistence preference to content script
-  chrome.tabs.sendMessage(tab.id, {
-    action: "setPersistence",
-    persistSettings: persistSettings,
-  });
+  await MessageHandler.setPersistence(persistSettings);
 
-  chrome.tabs.sendMessage(
-    tab.id,
-    {
-      action: "getSettings",
-    },
-    (response) => {
-      if (response && response.hasSettings) {
-        const settings = response.settings;
-        console.log("Loaded settings from content script:", settings);
+  // Load current video settings
+  const settings = await MessageHandler.getSettings();
+  if (settings) {
+    console.log("Loaded settings from content script:", settings);
 
-        // Update internal variables
-        currentRotation = settings.angle;
-        currentZoom = settings.zoom;
-        currentPanX = settings.panX;
-        currentPanY = settings.panY;
+    // Update internal variables
+    currentRotation = settings.angle;
+    currentZoom = settings.zoom;
+    currentPanX = settings.panX;
+    currentPanY = settings.panY;
 
-        // Update UI to reflect current settings
-        updateUI();
-      }
-    }
-  );
+    // Update UI to reflect current settings
+    updateUI();
+  }
 }
 
 function updateUI() {
@@ -76,7 +103,7 @@ function updateUI() {
 function updateRotation(delta) {
   currentRotation = (currentRotation + delta) % 360;
   if (currentRotation < 0) currentRotation += 360;
-  sendTransform();
+  MessageHandler.sendTransform();
 }
 
 function resetAllControls() {
@@ -90,7 +117,7 @@ function resetAllControls() {
   updateUI();
 
   // Apply the reset
-  sendTransform();
+  MessageHandler.sendTransform();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -110,33 +137,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isNaN(val)) val = 0;
     currentRotation = val % 360;
     if (currentRotation < 0) currentRotation += 360;
-    sendTransform();
+    MessageHandler.sendTransform();
   });
 
   document
     .getElementById("fillScreen")
-    .addEventListener("change", sendTransform);
+    .addEventListener("change", () => MessageHandler.sendTransform());
 
   // Persistence checkbox
   document
     .getElementById("persistSettings")
-    .addEventListener("change", async () => {
-      const isChecked = document.getElementById("persistSettings").checked;
-      await chrome.storage.local.set({ persistSettings: isChecked });
-      console.log("Saved persistence preference:", isChecked);
-
-      // Also send to content script immediately
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (tab) {
-        chrome.tabs.sendMessage(tab.id, {
-          action: "setPersistence",
-          persistSettings: isChecked,
-        });
-      }
-    });
+    .addEventListener("change", (e) =>
+      MessageHandler.setPersistence(e.target.checked)
+    );
 
   // Reset button
   document
@@ -148,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
   zoomSlider.addEventListener("input", () => {
     currentZoom = parseFloat(zoomSlider.value);
     zoomValue.textContent = currentZoom.toFixed(1) + "x";
-    sendTransform();
+    MessageHandler.sendTransform();
   });
 
   const panXSlider = document.getElementById("panX");
@@ -159,12 +172,12 @@ document.addEventListener("DOMContentLoaded", () => {
   panXSlider.addEventListener("input", () => {
     currentPanX = parseInt(panXSlider.value, 10);
     panXVal.textContent = currentPanX + "%";
-    sendTransform();
+    MessageHandler.sendTransform();
   });
 
   panYSlider.addEventListener("input", () => {
     currentPanY = parseInt(panYSlider.value, 10);
     panYVal.textContent = currentPanY + "%";
-    sendTransform();
+    MessageHandler.sendTransform();
   });
 });
