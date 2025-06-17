@@ -6,17 +6,6 @@ A powerful browser extension that adds basic video manipulation controls to YouT
   <img src="./images/controls.png" alt="Extension Popup">
 </div>
 
-### **Settings Persistence**
-
-- **Preserve settings toggle** - Choose whether video transformations carry over to new videos
-- **Smart storage system** - Settings automatically saved and restored when enabled
-
-### **Smart Reset**
-
-- **One-click reset** that restores video to original state
-- **Clears all transformations** and returns video to natural position
-- **Preserves original YouTube styling**
-
 ## 🚀 Installation
 
 Install from Chrome Web Store: [WIP - Link to be added])
