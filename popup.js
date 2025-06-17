@@ -148,6 +148,18 @@ document.addEventListener("DOMContentLoaded", () => {
     saveCurrentSettings();
   });
 
+  // Also save when visibility changes (popup loses focus)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      saveCurrentSettings();
+    }
+  });
+
+  // Save settings when window loses focus
+  window.addEventListener("blur", () => {
+    saveCurrentSettings();
+  });
+
   // New rotation buttons
   document
     .getElementById("rotateCCW")
