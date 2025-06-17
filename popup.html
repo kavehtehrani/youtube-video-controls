@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>YouTube Video Controls</title>
   <style>
     * {
       box-sizing: border-box;
@@ -12,15 +13,8 @@
       width: 280px;
       padding: 20px;
       margin: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #333;
-    }
-    
-    .container {
       background: white;
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      color: #333;
     }
     
     h3 {
@@ -220,7 +214,6 @@
   </style>
 </head>
 <body>
-  <div class="container">
     <h3>🎥 Video Controls</h3>
     
     <div class="checkbox-container">
@@ -234,7 +227,7 @@
     </div>
     
     <div class="custom-angle">
-      <label>Custom angle:</label>
+      <label for="customAngle">Custom angle:</label>
       <div class="angle-input-group">
       <input type="number" id="customAngle" value="0" min="0" max="360" step="1" />
         <button id="applyCustom" class="apply-btn">Apply</button>
@@ -250,7 +243,7 @@
 
     <div class="slider-section">
       <div class="slider-label">
-        <span>Zoom</span>
+        <label for="zoomSlider">Zoom</label>
         <span class="slider-value" id="zoomValue">1.0x</span>
       </div>
   <input type="range" id="zoomSlider" min="0.5" max="3" step="0.1" value="1" />
@@ -258,7 +251,7 @@
     
     <div class="slider-section">
       <div class="slider-label">
-        <span>Pan X</span>
+        <label for="panX">Pan X</label>
         <span class="slider-value" id="panXVal">0%</span>
       </div>
   <input type="range" id="panX" min="-100" max="100" value="0" />
@@ -266,14 +259,13 @@
     
     <div class="slider-section">
       <div class="slider-label">
-        <span>Pan Y</span>
+        <label for="panY">Pan Y</label>
         <span class="slider-value" id="panYVal">0%</span>
       </div>
   <input type="range" id="panY" min="-100" max="100" value="0" />
     </div>
     
     <button id="resetAll" class="reset-button">Reset All</button>
-  </div>
 
   <script src="popup.js"></script>
 </body>
