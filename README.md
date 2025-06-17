@@ -21,7 +21,7 @@ Install from Chrome Web Store: [WIP - Link to be added])
 
 ## 📄 Privacy Policy
 
-This extension does not collect any personal data. All transformations are performed locally in your browser without sending any information to external servers. 
+This extension does not collect any personal data. All transformations are performed locally in your browser without sending any information to external servers.
 
 Source code is available on [GitHub](https://github.com/kavehtehrani/youtube-video-controls)
 
