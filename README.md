@@ -2,7 +2,9 @@
 
 A powerful browser extension that adds basic video manipulation controls to YouTube, allowing you to rotate, zoom, and pan videos with precision.
 
-![Extension Popup](./images/controls.png)
+<div align="center">
+  <img src="./images/controls.png" alt="Extension Popup">
+</div>
 
 ### **Settings Persistence**
 
