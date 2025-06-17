@@ -51,22 +51,21 @@ async function applyTransform(
   fill,
   panX,
   panY,
-  persistSettings = true
+  persistSettings = true,
+  saveToStorage = false
 ) {
   const video = document.querySelector("video");
   if (!video) return;
 
   log(
-    `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}, persist=${persistSettings}`
+    `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}, persist=${persistSettings}, saveToStorage=${saveToStorage}`
   );
 
-  // Save settings to storage (only if persistence is enabled)
-  if (persistSettings) {
+  // Save settings to storage (only if explicitly requested and persistence is enabled)
+  if (saveToStorage && persistSettings) {
     const settings = { angle, zoom, fill, panX, panY };
     await chrome.storage.local.set({ videoSettings: settings });
     log("Settings saved to storage:", settings);
-  } else {
-    log("Persistence disabled - not saving settings to storage");
   }
 
   // Check if this is a complete reset

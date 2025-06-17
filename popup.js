@@ -5,14 +5,14 @@ let currentPanY = 0;
 
 // Message handler object
 const MessageHandler = {
-  async sendTransform() {
+  async sendTransform(saveToStorage = false) {
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
     if (!tab) return;
 
-    chrome.tabs.sendMessage(tab.id, {
+    const settings = {
       action: "transform",
       angle: currentRotation,
       zoom: currentZoom,
@@ -20,7 +20,10 @@ const MessageHandler = {
       panX: currentPanX,
       panY: currentPanY,
       persistSettings: document.getElementById("persistSettings").checked,
-    });
+      saveToStorage,
+    };
+
+    chrome.tabs.sendMessage(tab.id, settings);
   },
 
   async setPersistence(isChecked) {
@@ -120,9 +123,30 @@ function resetAllControls() {
   MessageHandler.sendTransform();
 }
 
+// Save current settings to storage
+async function saveCurrentSettings() {
+  const persistSettings = document.getElementById("persistSettings").checked;
+  if (persistSettings) {
+    const settings = {
+      angle: currentRotation,
+      zoom: currentZoom,
+      fill: document.getElementById("fillScreen").checked,
+      panX: currentPanX,
+      panY: currentPanY,
+    };
+    await chrome.storage.local.set({ videoSettings: settings });
+    console.log("Saved current settings:", settings);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   // Load current settings first
   loadCurrentSettings();
+
+  // Save settings when popup closes
+  window.addEventListener("unload", () => {
+    saveCurrentSettings();
+  });
 
   // New rotation buttons
   document
