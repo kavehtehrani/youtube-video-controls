@@ -1,6 +1,17 @@
 // Store original video styles
 let originalVideoStyles = null;
 
+// Memory-based settings persistence
+let savedSettings = {
+  angle: 0,
+  zoom: 1,
+  fill: false,
+  panX: 0,
+  panY: 0,
+};
+let hasSettings = false;
+let lastURL = null;
+
 function saveOriginalStyles(video) {
   if (originalVideoStyles === null) {
     originalVideoStyles = {
@@ -41,14 +52,21 @@ function applyTransform(angle, zoom, fill, panX, panY) {
     `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}`
   );
 
+  // Save settings in memory for persistence
+  savedSettings = { angle, zoom, fill, panX, panY };
+  hasSettings = angle !== 0 || zoom !== 1 || fill || panX !== 0 || panY !== 0;
+  console.log("Settings saved to memory:", savedSettings);
+
   // Check if this is a complete reset
   const isReset =
     angle === 0 && zoom === 1 && panX === 0 && panY === 0 && !fill;
 
   if (isReset) {
-    // Complete reset - restore original styles
+    // Complete reset - restore original styles and clear memory
     restoreOriginalStyles(video);
-    originalVideoStyles = null; // Clear saved state
+    originalVideoStyles = null;
+    hasSettings = false;
+    console.log("Settings cleared from memory");
     return;
   }
 
@@ -111,6 +129,58 @@ function applyTransform(angle, zoom, fill, panX, panY) {
   }
 }
 
+// Simple URL-based video change detection
+function checkForNewVideo() {
+  const currentURL = window.location.href;
+
+  if (currentURL !== lastURL) {
+    console.log("NEW VIDEO DETECTED - URL changed!");
+    console.log("Old URL:", lastURL);
+    console.log("New URL:", currentURL);
+
+    lastURL = currentURL;
+
+    // Reset original styles for new video
+    originalVideoStyles = null;
+
+    // Reapply saved settings if we have any
+    if (hasSettings) {
+      console.log("Reapplying saved settings to new video:", savedSettings);
+
+      // Function to attempt applying settings
+      const attemptApply = (attempt = 1) => {
+        const video = document.querySelector("video");
+        if (video && video.videoWidth > 0) {
+          // Video is ready, apply settings using the exact same function
+          console.log(`Video ready on attempt ${attempt}, applying settings`);
+          applyTransform(
+            savedSettings.angle,
+            savedSettings.zoom,
+            savedSettings.fill,
+            savedSettings.panX,
+            savedSettings.panY
+          );
+        } else if (attempt < 10) {
+          // Video not ready yet, try again
+          console.log(`Video not ready on attempt ${attempt}, retrying...`);
+          setTimeout(() => attemptApply(attempt + 1), 500);
+        } else {
+          console.log("Failed to find ready video after 10 attempts");
+        }
+      };
+
+      // Start attempting to apply settings
+      setTimeout(() => attemptApply(), 500);
+    }
+  }
+}
+
+// Check for URL changes every 1 second
+setInterval(checkForNewVideo, 1000);
+
+// Initial check
+checkForNewVideo();
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "transform") {
     applyTransform(
@@ -121,5 +191,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request.panY
     );
     sendResponse({ status: "done" });
+  } else if (request.action === "getSettings") {
+    // Send current settings to popup
+    sendResponse({ settings: savedSettings, hasSettings: hasSettings });
   }
 });

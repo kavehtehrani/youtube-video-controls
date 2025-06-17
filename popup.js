@@ -17,6 +17,48 @@ async function sendTransform() {
   });
 }
 
+async function loadCurrentSettings() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+
+  chrome.tabs.sendMessage(
+    tab.id,
+    {
+      action: "getSettings",
+    },
+    (response) => {
+      if (response && response.hasSettings) {
+        const settings = response.settings;
+        console.log("Loaded settings from content script:", settings);
+
+        // Update internal variables
+        currentRotation = settings.angle;
+        currentZoom = settings.zoom;
+        currentPanX = settings.panX;
+        currentPanY = settings.panY;
+
+        // Update UI to reflect current settings
+        updateUI();
+      }
+    }
+  );
+}
+
+function updateUI() {
+  document.getElementById("customAngle").value = currentRotation.toString();
+  document.getElementById("fillScreen").checked = false; // We'll handle fill state separately
+
+  document.getElementById("zoomSlider").value = currentZoom.toString();
+  document.getElementById("zoomValue").textContent =
+    currentZoom.toFixed(1) + "x";
+
+  document.getElementById("panX").value = currentPanX.toString();
+  document.getElementById("panXVal").textContent = currentPanX + "%";
+
+  document.getElementById("panY").value = currentPanY.toString();
+  document.getElementById("panYVal").textContent = currentPanY + "%";
+}
+
 function updateRotation(delta) {
   currentRotation = (currentRotation + delta) % 360;
   if (currentRotation < 0) currentRotation += 360;
@@ -31,23 +73,16 @@ function resetAllControls() {
   currentPanY = 0;
 
   // Update UI elements to reflect reset values
-  document.getElementById("customAngle").value = "0";
-  document.getElementById("fillScreen").checked = false;
-
-  document.getElementById("zoomSlider").value = "1";
-  document.getElementById("zoomValue").textContent = "1.0x";
-
-  document.getElementById("panX").value = "0";
-  document.getElementById("panXVal").textContent = "0%";
-
-  document.getElementById("panY").value = "0";
-  document.getElementById("panYVal").textContent = "0%";
+  updateUI();
 
   // Apply the reset
   sendTransform();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Load current settings first
+  loadCurrentSettings();
+
   // New rotation buttons
   document
     .getElementById("rotateCCW")
