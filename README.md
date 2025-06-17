@@ -1,4 +1,4 @@
-# YouTube Video Controls Extension
+# 🎬 YouTube Video Controls Extension
 
 A powerful browser extension that adds basic video manipulation controls to YouTube, allowing you to rotate, zoom, and pan videos with precision.
 
@@ -21,7 +21,3 @@ This project is open source and available under the MIT License.
 ## 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page or submit pull requests.
-
----
-
-**Enjoy enhanced YouTube viewing with full control over video presentation!** 🎬✨
