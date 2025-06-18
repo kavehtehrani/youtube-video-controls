@@ -210,6 +210,27 @@ setInterval(checkForNewVideo, 1000);
 // Initial check
 checkForNewVideo();
 
+// Listen for fullscreen changes
+document.addEventListener("fullscreenchange", () => {
+  // Get current settings from storage
+  chrome.storage.local.get(["videoSettings", "persistSettings"], (result) => {
+    if (result.persistSettings && result.videoSettings) {
+      const settings = result.videoSettings;
+      // Reapply settings after a short delay to ensure the video element is ready
+      setTimeout(() => {
+        applyTransform(
+          settings.angle,
+          settings.zoom,
+          settings.fill,
+          settings.panX,
+          settings.panY,
+          result.persistSettings
+        );
+      }, 100);
+    }
+  });
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "transform") {
     applyTransform(
