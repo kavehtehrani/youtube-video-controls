@@ -57,15 +57,24 @@ async function applyTransform(
   const video = document.querySelector("video");
   if (!video) return;
 
-  log(
-    `Applying transform: angle=${angle}, zoom=${zoom}, fill=${fill}, panX=${panX}, panY=${panY}, persist=${persistSettings}, saveToStorage=${saveToStorage}`
-  );
+  const isFullscreen = isVideoFullscreen();
+  console.log("Applying transform:", {
+    angle,
+    zoom,
+    fill,
+    panX,
+    panY,
+    isFullscreen,
+    currentTransform: video.style.transform,
+    currentPosition: video.style.position,
+    currentTop: video.style.top,
+    currentLeft: video.style.left,
+  });
 
   // Save settings to storage (only if explicitly requested and persistence is enabled)
   if (saveToStorage && persistSettings) {
     const settings = { angle, zoom, fill, panX, panY };
     await chrome.storage.local.set({ videoSettings: settings });
-    log("Settings saved to storage:", settings);
   }
 
   // Check if this is a complete reset
@@ -75,7 +84,6 @@ async function applyTransform(
     originalVideoStyles = null;
     if (persistSettings) {
       await chrome.storage.local.remove(["videoSettings"]);
-      log("Settings cleared from storage");
     }
     return;
   }
@@ -124,19 +132,22 @@ async function applyTransform(
           containerHeight / containerWidth
         );
         finalScale = zoom * scaleToFit;
-
-        log(
-          `Video rotated, scaling from ${zoom} to ${finalScale} (scale factor: ${scaleToFit})`
-        );
       }
 
       video.style.transformOrigin = "center";
       // Include panning in non-fill mode
       video.style.transform = `translate(${panX}%, ${panY}%) scale(${finalScale}) rotate(${angle}deg)`;
     }
-
-    log("Applied transform:", video.style.transform);
   }
+
+  // Log the final state
+  console.log("Transform applied:", {
+    finalTransform: video.style.transform,
+    finalPosition: video.style.position,
+    finalTop: video.style.top,
+    finalLeft: video.style.left,
+    videoRect: video.getBoundingClientRect(),
+  });
 }
 
 // Simple URL-based video change detection
