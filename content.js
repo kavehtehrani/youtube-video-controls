@@ -55,10 +55,13 @@ async function applyTransform(
   saveToStorage = false
 ) {
   const video = document.querySelector("video");
-  if (!video) return;
+  if (!video) {
+    log("No video element found for transform");
+    return;
+  }
 
   const isFullscreen = isVideoFullscreen();
-  console.log("Applying transform:", {
+  log("Applying transform:", {
     angle,
     zoom,
     fill,
@@ -69,6 +72,8 @@ async function applyTransform(
     currentPosition: video.style.position,
     currentTop: video.style.top,
     currentLeft: video.style.left,
+    videoRect: video.getBoundingClientRect(),
+    videoParent: video.parentElement,
   });
 
   // Save settings to storage (only if explicitly requested and persistence is enabled)
@@ -91,13 +96,16 @@ async function applyTransform(
   // Save original styles before making any changes
   saveOriginalStyles(video);
 
-  if (fill) {
+  if (fill || isFullscreen) {
     const translateX = -50 + panX;
     const translateY = -50 + panY;
 
+    // In fullscreen mode, we need to ensure the video takes up the full viewport
     video.style.position = "fixed";
     video.style.top = "50%";
     video.style.left = "50%";
+
+    // Adjust dimensions based on rotation
     if (angle % 180 === 90) {
       video.style.width = "100vh";
       video.style.height = "100vw";
@@ -105,10 +113,19 @@ async function applyTransform(
       video.style.width = "100vw";
       video.style.height = "100vh";
     }
+
     video.style.objectFit = "cover";
     video.style.zIndex = "9999";
     video.style.transformOrigin = "center";
     video.style.transform = `translate(${translateX}%, ${translateY}%) scale(${zoom}) rotate(${angle}deg)`;
+
+    log("Applied fullscreen/fill transform:", {
+      finalTransform: video.style.transform,
+      finalPosition: video.style.position,
+      finalTop: video.style.top,
+      finalLeft: video.style.left,
+      videoRect: video.getBoundingClientRect(),
+    });
   } else {
     // Non-fill mode: apply transform with panning support
     const needsTransform =
@@ -138,16 +155,12 @@ async function applyTransform(
       // Include panning in non-fill mode
       video.style.transform = `translate(${panX}%, ${panY}%) scale(${finalScale}) rotate(${angle}deg)`;
     }
-  }
 
-  // Log the final state
-  console.log("Transform applied:", {
-    finalTransform: video.style.transform,
-    finalPosition: video.style.position,
-    finalTop: video.style.top,
-    finalLeft: video.style.left,
-    videoRect: video.getBoundingClientRect(),
-  });
+    log("Applied normal transform:", {
+      finalTransform: video.style.transform,
+      videoRect: video.getBoundingClientRect(),
+    });
+  }
 }
 
 // Simple URL-based video change detection
@@ -238,26 +251,52 @@ function isVideoFullscreen() {
 
   // Check if the fullscreen element is the video or contains the video
   const video = document.querySelector("video");
-  return fullscreenElement === video || fullscreenElement.contains(video);
+  if (!video) return false;
+
+  // Check if video is in fullscreen or if its parent is in fullscreen
+  const isDirectFullscreen = fullscreenElement === video;
+  const isParentFullscreen = fullscreenElement.contains(video);
+
+  log("Fullscreen check:", {
+    fullscreenElement,
+    video,
+    isDirectFullscreen,
+    isParentFullscreen,
+    videoParent: video.parentElement,
+  });
+
+  return isDirectFullscreen || isParentFullscreen;
 }
 
 // Function to handle fullscreen changes
 function handleFullscreenChange() {
+  log("Fullscreen change detected");
+
   // Get current settings from storage
   chrome.storage.local.get(["videoSettings", "persistSettings"], (result) => {
     if (result.persistSettings && result.videoSettings) {
       const settings = result.videoSettings;
-      // Reapply settings after a short delay to ensure the video element is ready
+      log("Reapplying settings after fullscreen change:", settings);
+
+      // Increase timeout to ensure video element is ready
       setTimeout(() => {
-        applyTransform(
-          settings.angle,
-          settings.zoom,
-          settings.fill,
-          settings.panX,
-          settings.panY,
-          result.persistSettings
-        );
-      }, 100);
+        const video = document.querySelector("video");
+        if (video) {
+          log("Video element found, applying transform");
+          applyTransform(
+            settings.angle,
+            settings.zoom,
+            settings.fill,
+            settings.panX,
+            settings.panY,
+            result.persistSettings
+          );
+        } else {
+          log("Video element not found after fullscreen change");
+        }
+      }, 300); // Increased timeout to 300ms
+    } else {
+      log("No settings to reapply after fullscreen change");
     }
   });
 }
