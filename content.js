@@ -210,8 +210,28 @@ setInterval(checkForNewVideo, 1000);
 // Initial check
 checkForNewVideo();
 
-// Listen for fullscreen changes
-document.addEventListener("fullscreenchange", () => {
+// Helper function to get the current fullscreen element
+function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
+  );
+}
+
+// Helper function to check if video is in fullscreen
+function isVideoFullscreen() {
+  const fullscreenElement = getFullscreenElement();
+  if (!fullscreenElement) return false;
+
+  // Check if the fullscreen element is the video or contains the video
+  const video = document.querySelector("video");
+  return fullscreenElement === video || fullscreenElement.contains(video);
+}
+
+// Function to handle fullscreen changes
+function handleFullscreenChange() {
   // Get current settings from storage
   chrome.storage.local.get(["videoSettings", "persistSettings"], (result) => {
     if (result.persistSettings && result.videoSettings) {
@@ -229,7 +249,13 @@ document.addEventListener("fullscreenchange", () => {
       }, 100);
     }
   });
-});
+}
+
+// Add fullscreen change listeners with vendor prefixes
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+document.addEventListener("MSFullscreenChange", handleFullscreenChange);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "transform") {
