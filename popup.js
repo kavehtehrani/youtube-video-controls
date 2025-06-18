@@ -84,13 +84,13 @@ async function loadCurrentSettings() {
     currentPanY = settings.panY;
 
     // Update UI to reflect current settings
-    updateUI();
+    updateUI(settings);
   }
 }
 
-function updateUI() {
+function updateUI(settings) {
   document.getElementById("customAngle").value = currentRotation.toString();
-  document.getElementById("fillScreen").checked = false; // We'll handle fill state separately
+  document.getElementById("fillScreen").checked = settings.fill;
 
   document.getElementById("zoomSlider").value = currentZoom.toString();
   document.getElementById("zoomValue").textContent =
@@ -117,10 +117,16 @@ function resetAllControls() {
   currentPanY = 0;
 
   // Update UI elements to reflect reset values
-  updateUI();
+  updateUI({
+    angle: 0,
+    zoom: 1,
+    fill: false,
+    panX: 0,
+    panY: 0,
+  });
 
-  // Apply the reset
-  MessageHandler.sendTransform();
+  // Apply the reset and save to storage
+  MessageHandler.sendTransform(true); // Pass true to save to storage
 }
 
 // Save current settings to storage

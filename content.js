@@ -2,6 +2,8 @@
 let originalVideoStyles = null;
 let lastURL = null;
 const DEBUG = false; // Debug flag for logging
+let styleObserver = null; // Mutation observer for style changes
+let lastAppliedSettings = null; // Keep track of last applied settings
 
 // Style properties to track
 const STYLE_PROPERTIES = [
@@ -45,20 +47,75 @@ function isDefaultTransform(angle, zoom, fill, panX, panY) {
   return angle === 0 && zoom === 1 && panX === 0 && panY === 0 && !fill;
 }
 
-async function applyTransform(
-  angle,
-  zoom,
-  fill,
-  panX,
-  panY,
-  persistSettings = true,
-  saveToStorage = false
-) {
+// Function to monitor video style changes
+function setupStyleObserver(video) {
+  // Remove existing observer
+  if (styleObserver) {
+    styleObserver.disconnect();
+  }
+
+  styleObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (
+        mutation.type === "attributes" &&
+        mutation.attributeName === "style"
+      ) {
+        // Check if we have settings to reapply
+        if (lastAppliedSettings) {
+          log("Video style changed, checking if we need to reapply transform");
+
+          // Small delay to avoid rapid reapplication
+          setTimeout(() => {
+            // Check if our transform is still there
+            const currentTransform = video.style.transform;
+            const hasOurTransform =
+              currentTransform.includes("rotate") ||
+              currentTransform.includes("scale") ||
+              currentTransform.includes("translate");
+
+            if (
+              !hasOurTransform &&
+              !isDefaultTransform(
+                lastAppliedSettings.angle,
+                lastAppliedSettings.zoom,
+                lastAppliedSettings.fill,
+                lastAppliedSettings.panX,
+                lastAppliedSettings.panY
+              )
+            ) {
+              log("Transform was removed by YouTube, reapplying...");
+              applyTransform(
+                lastAppliedSettings.angle,
+                lastAppliedSettings.zoom,
+                lastAppliedSettings.fill,
+                lastAppliedSettings.panX,
+                lastAppliedSettings.panY
+              );
+            }
+          }, 100);
+        }
+      }
+    });
+  });
+
+  styleObserver.observe(video, {
+    attributes: true,
+    attributeFilter: ["style"],
+  });
+}
+
+async function applyTransform(angle, zoom, fill, panX, panY) {
   const video = document.querySelector("video");
   if (!video) {
     log("No video element found for transform");
     return;
   }
+
+  // Store the settings we're applying
+  lastAppliedSettings = { angle, zoom, fill, panX, panY };
+
+  // Set up style observer if not already done
+  setupStyleObserver(video);
 
   const isFullscreen = isVideoFullscreen();
   log("Applying transform:", {
@@ -76,22 +133,27 @@ async function applyTransform(
     videoParent: video.parentElement,
   });
 
-  // Save settings to storage (only if explicitly requested and persistence is enabled)
-  if (saveToStorage && persistSettings) {
-    const settings = { angle, zoom, fill, panX, panY };
-    await chrome.storage.local.set({ videoSettings: settings });
-  }
-
   // Check if this is a complete reset
   if (isDefaultTransform(angle, zoom, fill, panX, panY)) {
     // Complete reset - restore original styles and clear storage
     restoreOriginalStyles(video);
     originalVideoStyles = null;
-    if (persistSettings) {
-      await chrome.storage.local.remove(["videoSettings"]);
+    lastAppliedSettings = null;
+    await chrome.storage.local.remove(["videoSettings"]);
+    log("Reset applied - cleared storage and restored original styles");
+
+    // Disconnect observer since we're resetting
+    if (styleObserver) {
+      styleObserver.disconnect();
+      styleObserver = null;
     }
     return;
   }
+
+  // Always save settings to storage while on the same video (for non-reset cases)
+  const settings = { angle, zoom, fill, panX, panY };
+  await chrome.storage.local.set({ videoSettings: settings });
+  log("Settings saved to storage:", settings);
 
   // Save original styles before making any changes
   saveOriginalStyles(video);
@@ -184,7 +246,11 @@ async function checkForNewVideo() {
     ]);
     const persistenceEnabled = result.persistSettings || false;
 
-    if (persistenceEnabled && result.videoSettings) {
+    if (!persistenceEnabled) {
+      // If persistence is disabled, clear saved settings for the new video
+      log("Persistence disabled, clearing saved settings for new video");
+      await chrome.storage.local.remove(["videoSettings"]);
+    } else if (result.videoSettings) {
       const settings = result.videoSettings;
       const hasSettings =
         settings.angle !== 0 ||
@@ -196,34 +262,49 @@ async function checkForNewVideo() {
       if (hasSettings) {
         log("Reapplying saved settings to new video:", settings);
 
-        // Function to attempt applying settings
-        const attemptApply = (attempt = 1) => {
+        // Function to attempt applying settings with better timing
+        const attemptApply = (attempt = 1, maxAttempts = 20) => {
           const video = document.querySelector("video");
-          if (video && video.videoWidth > 0) {
-            // Video is ready, apply settings using the exact same function
-            log(`Video ready on attempt ${attempt}, applying settings`);
-            applyTransform(
-              settings.angle,
-              settings.zoom,
-              settings.fill,
-              settings.panX,
-              settings.panY,
-              persistenceEnabled
+          if (video && video.videoWidth > 0 && video.readyState >= 2) {
+            // Video is ready and has metadata, but wait a bit more for YouTube to finish
+            log(
+              `Video ready on attempt ${attempt}, waiting for YouTube to finish loading...`
             );
-          } else if (attempt < 10) {
+            setTimeout(() => {
+              applyTransform(
+                settings.angle,
+                settings.zoom,
+                settings.fill,
+                settings.panX,
+                settings.panY
+              );
+
+              // Apply again after a short delay to override any YouTube changes
+              setTimeout(() => {
+                log("Reapplying transform to ensure it sticks");
+                applyTransform(
+                  settings.angle,
+                  settings.zoom,
+                  settings.fill,
+                  settings.panX,
+                  settings.panY
+                );
+              }, 500);
+            }, 1000); // Wait 1 second after video is ready
+          } else if (attempt < maxAttempts) {
             // Video not ready yet, try again
-            log(`Video not ready on attempt ${attempt}, retrying...`);
-            setTimeout(() => attemptApply(attempt + 1), 500);
+            log(
+              `Video not ready on attempt ${attempt} (readyState: ${video?.readyState}, videoWidth: ${video?.videoWidth}), retrying...`
+            );
+            setTimeout(() => attemptApply(attempt + 1, maxAttempts), 300);
           } else {
-            log("Failed to find ready video after 10 attempts");
+            log("Failed to find ready video after maximum attempts");
           }
         };
 
-        // Start attempting to apply settings
-        setTimeout(() => attemptApply(), 500);
+        // Start attempting to apply settings with initial delay
+        setTimeout(() => attemptApply(), 800);
       }
-    } else {
-      log("Persistence disabled or no settings - new video starts fresh");
     }
   }
 }
@@ -273,8 +354,8 @@ function handleFullscreenChange() {
   log("Fullscreen change detected");
 
   // Get current settings from storage
-  chrome.storage.local.get(["videoSettings", "persistSettings"], (result) => {
-    if (result.persistSettings && result.videoSettings) {
+  chrome.storage.local.get(["videoSettings"], (result) => {
+    if (result.videoSettings) {
       const settings = result.videoSettings;
       log("Reapplying settings after fullscreen change:", settings);
 
@@ -288,8 +369,7 @@ function handleFullscreenChange() {
             settings.zoom,
             settings.fill,
             settings.panX,
-            settings.panY,
-            result.persistSettings
+            settings.panY
           );
         } else {
           log("Video element not found after fullscreen change");
@@ -314,8 +394,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request.zoom,
       request.fill,
       request.panX,
-      request.panY,
-      request.persistSettings
+      request.panY
     ).then(() => {
       sendResponse({ status: "done" });
     });
