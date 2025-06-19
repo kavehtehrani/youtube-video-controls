@@ -8,7 +8,7 @@ A browser extension that adds basic video manipulation controls to YouTube, allo
 
 ## 🚀 Installation
 
-Install from Chrome Web Store: [WIP - Link to be added])
+Install from Chrome Web Store [here](https://chromewebstore.google.com/detail/youtube-video-controls/cddjdndjpiepihbknbjkjghijabbikmh?authuser=2&hl=en).
 
 ## 📄 Privacy Policy
 
